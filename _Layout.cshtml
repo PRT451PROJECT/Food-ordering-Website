@@ -1,0 +1,752 @@
+﻿@using System.Globalization
+@using BookingTable.Entities.Entities
+@using BookingTable.Entities.Enum
+@using BookingTable.Web.Helpers
+@using BookingTable.Web.Resources
+@using BookingTable.Web.Security
+@{
+    var web = WebSetting.GetWebContent();
+    var limitTime = DateTime.Today.AddDays(int.Parse(WebSetting.GetBookingLimit()));
+
+    var floorId = "";
+    var typeId = "";
+    var time = DateTime.Now;
+
+    if (ViewBag.Time != null)
+    {
+        time = (DateTime)ViewBag.Time;
+        floorId = ViewBag.Floor.ToString();
+        typeId = ViewBag.Type.ToString();
+    }
+
+    var user = (Customer)Session["User"];
+    var order = (Order) Session["BookingEntry"];
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>@web.WebLongName</title>
+    <link rel="icon" href="~/Content/images/favicon.ico">
+    <!-- Tell the browser to be responsive to screen width -->
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="~/Content/css/select2.min.css" />
+    <link rel="stylesheet" href="~/Content/DataTables/css/jquery.dataTables.css">
+    <link rel="stylesheet" href="~/Content/css/all.css" />
+    <link rel="stylesheet" href="~/Content/css/bootstrap-timepicker.min.css" />
+    <!-- Bootstrap 3.3.6 -->
+    <link rel="stylesheet" href="~/Content/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
+    <!-- Ionicons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="~/Content/css/AdminLTE.min.css">
+    <!-- AdminLTE Skins -->
+    <link rel="stylesheet" href="~/Content/css/_all-skins.min.css">
+    <!-- Data tables -->
+    <link rel="stylesheet" href="~/Content/css/common.css" />
+    <link rel="stylesheet" href="~/Content/css/datepicker3.css" />
+
+<style>
+    .txt-ar    {
+ width: 140px;
+    margin-right: 13px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    height: 34px !important;
+float:left !important;
+    }
+    .txt-btn{
+        float:left !important;
+    }
+</style>
+</head>
+<body class="skin-blue-light">
+    <div class="wrapper">
+        <!-- Header -->
+        <header class="main-header">
+            <!-- Logo -->
+            <a href="@Url.Action("Index", "Home")" class="logo">
+                <span class="logo-mini"><img src="~/Content/images/logo.png" style="width: 100px; margin-right:10px;height: 40px;"> &nbsp; <b>Darwin Eatz     </b></span>
+                <span class="logo-lg" style="padding-bottom:15px;"><img src="~/Content/images/logo.png" style="width: 95px; height: 53px; margin-right: 3px;l"><b>Darwin Eatz</b></span>
+            </a>
+            <!-- /Logo -->
+            <!-- Navbar -->
+            <nav class="navbar">
+                <!-- Toggle -->
+               @* <a href="javascript:void(0)" class="sidebar-toggle" data-toggle="offcanvas" role="button">
+                    <span class="sr-only">Toggle navigation</span>m
+                </a>*@
+                <!-- /Toggle -->
+                <!-- Navbar Right -->
+                <div class="navbar-custom-menu">
+                    <ul class="nav navbar-nav">
+                        <li class="dropdown user user-menu">
+                                @Html.ActionLink("Menu", "Index", "Home")
+                            </li>
+                        <li class="dropdown user user-menu">
+                                 @Html.ActionLink("Offers", "Index","Offer")
+                            </li>
+                        <li class="dropdown user user-menu">
+                                @Html.ActionLink("About", "About", "Home")
+                            </li>
+                        <li>@Html.ActionLink("Contact US", "Contact", "Home")</li>
+
+                        <li style="    width: 88px;">
+                            <button id="btnBooking" type="button" class="btn btn-primary pull-left" style="margin-top: 9px"><b id="numberOfTables">@Resources.Content_Tables [@(order!= null && order.OrderDetails!=null? order.OrderDetails.Count : 0)]</b></button>
+                        </li>
+                        <li style="float: left;">
+                            @using (Html.BeginForm("Search", "Orders", FormMethod.Post, new { Id = "frmTest", enctype = "multipart/form-data" }))
+                            {
+                                @Html.AntiForgeryToken()
+    
+
+                            @Html.TextArea("Search", "", new { @class = "txt-ar form-control" }) 
+                            <button id="btnSearch" type="search" class="txt-btn btn btn-primary pull-left" style="margin-top: 8px;float: left !important;"><b id="searchfood"  onclick="location.href='@Url.Action("Search", "Orders")'" method="post">Search</b></button>
+                            
+                            }
+                        </li>
+                        @if (user != null)
+                        {
+                            <li class="dropdown user user-menu">
+                                <a id="userDropdown" href="javascript:void(0)" class="dropdown-toggle" data-toggle="dropdown">
+                                    @if (string.IsNullOrEmpty(user.Image))
+                                    {
+                                        <img src="~/Content/images/noUserImage.png" class="user-image" alt="User Image">
+                                    }
+                                    else
+                                    {
+                                        <img src="@Support.GetPathPhotoFolder()/@user.Image" class="user-image" alt="User Image">
+                                    }
+                                    <span class="hidden-xs">@user.FullName</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li class="user-header">
+                                        @if (string.IsNullOrEmpty(user.Image))
+                                        {
+                                            <img src="~/Content/images/noUserImage.png" class="img-circle" alt="User Image">
+                                        }
+                                        else
+                                        {
+                                            <img src="@Support.GetPathPhotoFolder()/@user.Image" class="img-circle" alt="User Image">
+                                        }
+                                        <p>
+                                            @user.FullName
+                                            <small>@user.DateOfBirth.ToString("D")</small>
+                                        </p>
+                                    </li>
+                                    <li class="user-footer">
+                                        <div class="pull-left">
+                                            <a href="@Url.Action("Profile", "User")" class="btn btn-default btn-flat">@Resources.Content_Profile</a>
+                                        </div>
+                                        <div class="pull-right">
+                                            <a href="@Url.Action("Logout", "Login")" class="btn btn-default btn-flat">@Resources.Content_SignOut</a>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="dropdown user user-menu">
+                                <a href="javascript:void(0)" data-toggle="modal" data-target="#loginModal">
+                                    <b>@Resources.Content_Login</b>
+                                </a>
+                            </li>
+
+                        }
+                    </ul>
+
+                </div>
+            </nav>
+        </header>
+       
+        <script>
+            
+            function ConnectionError() {
+                ShowMessage({
+                    'Title': "@Resources.Content_Error", 'Content': "@Resources.Message_Error_Connection",
+                    'Type': '@MessageTypeEnum.Error.ToString()'
+                });
+            }
+
+        </script>
+        <div class="content-wrapper" style="background:#fff;">
+
+ <div id="myCarousel" class="carousel slide" data-ride="carousel">
+      <!-- Indicators -->
+      <ol class="carousel-indicators">
+        <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+        <li data-target="#myCarousel" data-slide-to="1"></li>
+        <li data-target="#myCarousel" data-slide-to="2"></li>
+      </ol>
+      <div class="carousel-inner" role="listbox">
+        <div class="item active">
+          <img style="width:100%" class="first-slide" src="/Content/images/header_bg@2x.png" alt="First slide">
+          @*<div class="container">
+            <div class="carousel-caption">
+              <h1>Example headline.</h1>
+              <p>Note: If you're viewing this page via a <code>file://</code> URL, the "next" and "previous" Glyphicon buttons on the left and right might not load/display properly due to web browser security rules.</p>
+              <p><a class="btn btn-lg btn-primary" href="#" role="button">Sign up today</a></p>
+            </div>
+          </div>*@
+        </div>
+        <div class="item">
+          <img style="width:100%" class="second-slide" src="/Content/images/pizza1.png"  alt="Second slide">
+          @*<div class="container">
+            <div class="carousel-caption">
+              <h1>Another example headline.</h1>
+              <p>Cras justo odio, dapibus ac facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus. Nullam id dolor id nibh ultricies vehicula ut id elit.</p>
+              <p><a class="btn btn-lg btn-primary" href="#" role="button">Learn more</a></p>
+            </div>
+          </div>*@
+        </div>
+        <div class="item">
+          <img style="width:100%" class="third-slide" src="/Content/images/foodorder.png"  alt="Third slide">
+          @*<div class="container">
+            <div class="carousel-caption">
+              <h1>One more for good measure.</h1>
+              <p>Cras justo odio, dapibus ac facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus. Nullam id dolor id nibh ultricies vehicula ut id elit.</p>
+              <p><a class="btn btn-lg btn-primary" href="#" role="button">Browse gallery</a></p>
+            </div>
+          </div>*@
+        </div>
+      </div>
+      <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
+        <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+        <span class="sr-only">Previous</span>
+      </a>
+      <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
+        <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+        <span class="sr-only">Next</span>
+      </a>
+    </div><!-- /.carousel -->
+
+
+
+            <div id="popupModal" class="modal fade" role="dialog" style="z-index: 99999;">
+                <div class="modal-dialog">
+                    <div id="popupContainer" class="modal-content">
+                        
+                    </div>
+                </div>
+            </div>
+            <div id="messageModal" class="modal fade" role="dialog" style="z-index: 100000;">
+                <div class="modal-dialog">
+                    <div id="messageContainer" class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                            <h4 id="messageTitle" class="modal-title"></h4>
+                        </div>
+                        <div class="modal-body">
+                            <p id="messageContent">
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline" data-dismiss="modal">@Resources.Content_Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="messageReloadModal" class="modal fade" role="dialog" style="z-index: 100000;">
+                <div class="modal-dialog">
+                    <div id="messageReloadContainer" class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                            <h4 id="messageReloadTitle" class="modal-title"></h4>
+                        </div>
+                        <div class="modal-body">
+                            <p id="messageReloadContent">
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline" data-dismiss="modal">@Resources.Content_Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script src="~/Scripts/jquery-2.2.3.min.js"></script>
+            <script src="~/Scripts/common.js"></script>
+            <section class="content" style="padding-bottom:0px;float:left;width:100%;    margin: 25px 0;background:#fff;">
+                @RenderBody()
+            </section>
+        </div>
+        <footer class="main-footer" style="background: #8cd0f7;width:100%;float:left;">
+
+<div class="container">
+   
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="col-md-3">
+        <ul class="nav nav-pills nav-stacked">
+
+          <li> @Html.ActionLink("About", "About", "Home")</li>
+          
+        </ul>
+      </div>
+      <div class="col-md-3">
+        <ul class="nav nav-pills nav-stacked">
+          
+@*          <li><a href="#">FAQ</a></li>*@
+        </ul>
+      </div>
+      <div class="col-md-3">
+        <ul class="nav nav-pills nav-stacked">
+         @* <li><a href="#">Disclaimer</a></li>
+          <li><a href="#">Terms & Conditions</a></li> *@         
+        </ul>
+      </div>
+      <div class="col-md-3">
+        <ul class="nav nav-pills nav-stacked">
+        @*  <li><a href="#">Privacy Policy</a></li>*@
+            <li> @Html.ActionLink("FeedBack", "Create", "FeedBack")</li>
+        </ul>
+      </div>  
+    </div>
+  </div>
+  <hr>
+   
+</div>
+
+
+            <p style="text-align:center"><strong>Copyright 2017 &copy; <a></a>.</strong> All rights reserved.</p>
+            
+        </footer>
+
+
+    </div>
+    @if (user == null)
+    {
+        <script src="~/scripts/select2.full.min.js"></script>
+            <script src="~/scripts/jquery.inputmask.js"></script>
+        <script src="~/scripts/icheck.min.js"></script>
+        <script src="~/Scripts/bootstrap-datepicker.js"></script>
+        <div id="loginModal" class="modal fade" role="dialog" style="z-index: 99999;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                        <h4>@Resources.Content_Login</h4>
+                    </div>
+                    <div>
+                        <h5><span class="badge bg-green">@ViewBag.Message</h5>
+                        
+                    </div>
+                    <div class="modal-body">
+                        <div class="login-box-body">
+                            <form id="formLogin">
+                                <input type="hidden" id="RedirectToUrl" name="RedirectToUrl" value="@HttpContext.Current.Request.RawUrl" />
+                                <div class="form-group has-feedback">
+                                    <input id="Username" name="Username" type="text" class="form-control" placeholder="@Resources.Content_Username">
+                                    <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
+                                </div>
+                                <div class="form-group has-feedback">
+                                    <input id="Password" name="Password" type="password" class="form-control" placeholder="@Resources.Content_Password">
+                                    <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+                                </div>
+                                <div class="form-group has-feedback">
+                                    <div class="checkbox icheck">
+                                        <label>
+                                            <input id="Remember" name="Remember" type="checkbox" class="minimal"> @Resources.Content_RememberMe
+                                        </label>
+                                        <button id="btnLogin" type="button" class="btn btn-primary btn-block btn-flat pull-right" style="margin-top: 15px">@Resources.Content_SignIn</button>
+                                        <button id="btnGuest" type="submit" class="btn btn-primary btn-block btn-flat pull-right" style="margin-top: 15px">Guest User</button>
+                                        @*<input type="button" id="btnGuest" value="Guest User" class="btn btn-primary btn-block btn-flat pull-right" style="margin-top: 15px" onclick="location.href='@Url.Action("Login","Home")'" />*@
+                                    </div>
+                                </div>
+                            </form>
+                            @*<div class="social-auth-links text-center">
+                                    <p>- OR -</p>
+                                    <a href="javascript:void(0)" class="btn btn-block btn-social btn-facebook btn-flat">
+                                        <i class="fa fa-facebook"></i> @Resources.Content_SigninUsing
+                                        Facebook
+                                    </a>
+                                    <a href="javascript:void(0)" class="btn btn-block btn-social btn-google btn-flat">
+                                        <i class="fa fa-google-plus"></i> @Resources.Content_SigninUsing
+                                        Google+
+                                    </a>
+                                </div>*@
+                            <!-- /.social-auth-links -->
+                            @*<a href="javascript:void(0)">@Resources.Content_ForgotPassword</a><br>*@
+                            <a href="javascript:void(0)" class="text-center" data-toggle="modal" data-target="#registerModal">@Resources.Content_NewMembership</a>
+
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            $('#Remember')
+                .iCheck({
+                    checkboxClass: 'icheckbox_square-blue',
+                    radioClass: 'iradio_square-blue',
+                    increaseArea: '20%' // optional
+                });
+            $(document)
+                .ready(function () {
+
+                    jQuery.validator.addMethod("noSpaceOnly",
+                        function (value, element) {
+                            return value.trim(' ') !== "";
+                        },
+                        '@Resources.Validate_Required');
+
+                    $('#formLogin')
+                        .validate({
+                            rules: {
+                                Username: {
+                                    maxlength: 32,
+                                    noSpaceOnly: true
+                                },
+                                Password: {
+                                    maxlength: 32,
+                                    noSpaceOnly: true
+                                }
+                            },
+                            messages: {
+                                Username: {
+                                    maxlength: '@String.Format(Resources.Validate_LenghtMax, 32)'
+                                },
+                                Password: {
+                                    maxlength: '@String.Format(Resources.Validate_LenghtMax, 32)'
+                                }
+                            }
+
+                        });
+
+                    $('#btnLogin')
+                        .click(function () {
+                            if ($('#formLogin').valid())
+                            {
+                                $.ajax({
+                                    url: '@Url.Action("Login", "Login")',
+                                    type: 'POST',
+                                    data: $('#formLogin').serialize(),
+                                    success: function (data) {
+                                       
+                                        ShowMessage(data);
+                                       
+                                       @if (Session["ReturnToUrl"] != null)
+                                        {
+                                            <text>location.href = '@Session["ReturnToUrl"].ToString()';</text>
+                                          
+                                         
+                                       }
+                                        
+                                    },
+                                    error: function () {
+                                        ConnectionError();
+                                    }
+                                });
+                            }
+                        });
+                     $('#btnGuest')
+                        .click(function () {
+                            if (1==1)
+                            {
+                                $.ajax({
+                                    url: '@Url.Action("GuesstLogin", "Login")',
+                                    type: 'POST',
+                                    //data: $('#formLogin').serialize(),
+                                    success: function (data) {
+                                        //ShowMessage(data);
+                                       
+                                       @if (Session["ReturnToUrl"] != null)
+                                        {
+                                            <text>location.href = '@Session["ReturnToUrl"].ToString()';</text>
+                                       }
+                                        
+                                    },
+                                    error: function () {
+                                        ConnectionError();
+                                    }
+                                });
+                            }
+                        });
+                });
+        </script>
+        <div id="registerModal" class="modal fade" role="dialog" style="z-index: 99999;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                        <h4>@Resources.Content_NewMembership</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="login-box-body">
+                            <form id="formRegister">
+                                <input type="hidden" id="RedirectToUrl" name="RedirectToUrl" value="@HttpContext.Current.Request.RawUrl" />
+                                <div class="form-group">
+                                    <input type="text" id="FullName" name="FullName" class="form-control" placeholder="@Resources.Content_Fullname" />
+                                </div>
+                                <div class="form-group">
+                                    <div class="input-group dateofbirth">
+                                        <div class="input-group-addon">
+                                            <i class="fa fa-calendar"></i>
+                                        </div>
+                                        <input type="text" class="form-control pull-right" id="DateOfBirth" name="DateOfBirth" placeholder="@Resources.Content_Birthday">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="Address" name="Address" class="form-control" placeholder="@Resources.Content_Address" />
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="Phone" name="Phone" class="form-control" placeholder="@Resources.Content_Phone" />
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="Email" name="Email" class="form-control" placeholder="@Resources.Content_Email" />
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="Username" name="Username" class="form-control" placeholder="@Resources.Content_Username" />
+                                </div>
+                                <div class="form-group">
+                                    <input type="password" id="NewPassword" name="Password" class="form-control" placeholder="@Resources.Content_Password" />
+                                </div>
+                                <div class="form-group ">
+                                    <input type="password" id="PasswordConfirm" name="PasswordConfirm" class="form-control" placeholder="@Resources.Content_PasswordConfirm" />
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-8">
+                                    </div>
+                                    <!-- /.col -->
+                                    <div class="col-xs-4">
+                                        <button id="btnRegister" type="button" class="btn btn-primary btn-block btn-flat">@Resources.Content_Register</button>
+                                    </div>
+                                    <!-- /.col -->
+                                </div>
+                            </form>
+
+                            @*<div class="social-auth-links text-center">
+                                    <p>- OR -</p>
+                                    <a href="javascript:void(0)" class="btn btn-block btn-social btn-facebook btn-flat">
+                                        <i class="fa fa-facebook"></i> @Resources.Content_SignupUsing
+                                        Facebook
+                                    </a>
+                                    <a href="javascript:void(0)" class="btn btn-block btn-social btn-google btn-flat">
+                                        <i class="fa fa-google-plus"></i> @Resources.Content_SignupUsing
+                                        Google+
+                                    </a>
+                                </div>*@
+                            <a href="javascript:void(0)" class="text-center" data-dismiss="modal">@Resources.Content_AlreadyMemeber</a>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            $('#DateOfBirth')
+                .datepicker({
+                    format: 'mm/dd/yyyy',
+                    startDate:'@DateTime.Today.AddYears(-60).ToString("MM/dd/yyyy")',
+                    endDate: '@DateTime.Today.AddYears(-12).ToString("MM/dd/yyyy")',
+                    autoclose: true
+                });
+            $(document)
+                .ready(function () {
+
+                    jQuery.validator.addMethod("noSpaceOnly",
+                        function (value, element) {
+                            return value.trim(' ') !== "";
+                        },
+                        '@Resources.Validate_Required');
+
+                    jQuery.validator.addMethod("PasswordConfirm",
+                        function (value, element) {
+                            return $('#NewPassword').val() === $('#PasswordConfirm').val();
+                        },
+                        '@Resources.Validate_PasswordConfirm');
+
+                    $.validator.addMethod("maxDate",
+                        function (value, element) {
+                            var curDate = new Date();
+                            var inputDate = new Date(value);
+                            return inputDate < curDate;
+                        },
+                        "@Resources.Validate_MaxDate");
+
+                    $('#formRegister')
+                        .validate({
+                            rules:
+                            {
+                                FullName:
+                                {
+                                    maxlength: 64,
+                                    noSpaceOnly: true
+                                },
+                                Username:
+                                {
+                                    maxlength: 32,
+                                    noSpaceOnly: true
+                                },
+                                Password:
+                                {
+                                    maxlength: 32,
+                                    noSpaceOnly: true
+                                    
+                                },
+                                Address:
+                                {
+                                    maxlength: 128,
+                                    noSpaceOnly: true
+                                },
+                                PasswordConfirm:
+                                {
+                                    maxlength: 32,
+                                    noSpaceOnly: true,
+                                    PasswordConfirm: true
+                                },
+                                Phone:
+                                {
+                                    maxlength: 10,
+                                    number: true,
+                                    noSpaceOnly: true,
+
+                                },
+                                Email:
+                                {
+                                    maxlength: 128,
+                                    noSpaceOnly: true,
+                                    email: true
+                                },
+                                Birthday:
+                                {
+                                    noSpaceOnly: true
+                                }
+                            },
+                            messages:
+                            {
+                                FullName:
+                                {
+                                    maxlength: '@string.Format(Resources.Validate_LenghtMax, 64)'
+                                },
+                                Username:
+                                {
+                                    maxlength: '@string.Format(Resources.Validate_LenghtMax, 32)'
+                                },
+                                Password:
+                                {
+                                    maxlength: '@string.Format(Resources.Validate_LenghtMax, 32)'
+                                },
+                                Address:
+                                {
+                                    maxlength: '@string.Format(Resources.Validate_LenghtMax, 128)'
+                                },
+                                PasswordConfirm:
+                                {
+                                    maxlength: '@string.Format(Resources.Validate_LenghtMax, 32)'
+                                },
+                                Phone:
+                                {
+                                    maxlength: '@string.Format("Please enter no more than {0} numbers.", 16)'
+                                },
+                                Email:
+                                {
+                                    maxlength: '@string.Format(Resources.Validate_LenghtMax, 128)',
+                                    email: '@Resources.Validate_Email'
+                                }
+                            }
+                        });
+                   
+                    $('#btnRegister')
+                        .click(function () {
+                            if ($('#formRegister').valid()) {
+                                $.ajax({
+                                    url: '@Url.Action("Register", "Login")',
+                                    type: 'POST',
+                                    data: $('#formRegister').serialize(),
+                                    success: function (data) {
+                                        ShowMessage(data);
+                                        
+                                        @if (Session["ReturnToUrl"] != null)
+                                        { 
+                                            <text>location.href = '@Session["ReturnToUrl"].ToString()';</text>
+                                        }
+                                        
+                                    },
+                                    error: function () {
+                                        ConnectionError();
+                                    }
+                                });
+                            }
+                        });
+                   
+                });
+
+        </script>
+    }
+    <!-- jQuery 2.2.3 -->
+    <script src="~/Scripts/jquery-2.2.3.min.js"></script>
+    <!-- Bootstrap 3.3.6 -->
+    <script src="~/Scripts/bootstrap.min.js"></script>
+    <!-- FastClick -->
+    <script src="~/Scripts/fastclick.js"></script>
+    <!-- AdminLTE App -->
+    <script src="~/Scripts/app.min.js"></script>
+    <!--Data tables-->
+    <script src="~/Scripts/DataTables/jquery.dataTables.js"></script>
+    <!-- Validate-->
+    <script src="~/scripts/jquery.validate.min.js"></script>
+
+    <script src="~/scripts/select2.full.min.js"></script>
+    <script src="~/scripts/jquery.inputmask.js"></script>
+    <script src="~/Scripts/bootstrap-datepicker.js"></script>
+    <script src="~/Scripts/bootstrap-timepicker.min.js"></script>
+    <script>
+        $(document)
+            .ready(function () {
+                $('#messageReloadModal')
+                    .on('hide.bs.modal',
+                        function (e) {
+                            window.location.href = window.location.href
+                        });
+                $('#popupModal')
+                   .on('hide.bs.modal',
+                       function (e) {
+                           $("#popupContainer").html("");
+                       });
+                $(".select2").select2();
+
+                $('.date')
+                    .datepicker({
+                        format: 'mm/dd/yyyy',
+                        startDate: new Date(),
+                        endDate: '@limitTime.ToString("MM/dd/yyyy")',
+                        autoclose: true
+                    });
+
+                $(".timepicker")
+                    .timepicker({
+                        showInputs: false
+                    });
+                $('#btnSearch')
+                .click(function () {
+                   
+                    $.ajax({
+                        url: '@Url.Action("SearchModel", "Orders")',
+                        type: 'POST',
+                        success: function (data) {
+                            ShowPopup(data);
+                        },
+                        error: function () {
+                            ConnectionError();
+                        }
+                 });
+            });              
+        }
+    </script>
+</body>
+</html>
